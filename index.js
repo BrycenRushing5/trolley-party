@@ -20,7 +20,7 @@ let qrCodeDataUrl = '';
 // For this example, I'll assume your Render URL is something like:
 // https://trolley-party.onrender.com
 // IMPORTANT: Replace this URL with your ACTUAL Render URL after deploying once.
-const myPublicUrl = "https://YOUR-RENDER-APP-NAME.onrender.com"; 
+const myPublicUrl = "https://trolley-party.onrender.com"; 
 
 // Generate the QR code as a Data URL string
 QRCode.toDataURL(myPublicUrl, function (err, url) {
