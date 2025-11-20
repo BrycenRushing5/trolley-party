@@ -19,16 +19,18 @@ function becomeHost() {
 // --- SETTINGS UI LOGIC ---
 function setVibe(vibe) {
     currentSettings.vibe = vibe;
+    // Update visual state locally immediately for snappiness
     document.querySelectorAll('.vibe-btn').forEach(e => e.classList.remove('selected'));
     const btn = document.getElementById(`vibe-${vibe}`);
     if(btn) btn.classList.add('selected');
+    
     socket.emit('updateSettings', currentSettings);
 }
 
 function setMode(mode) {
     currentSettings.mode = mode;
     
-    // Visual Update
+    // Update visual state
     document.querySelectorAll('.mode-card').forEach(e => e.classList.remove('selected'));
     const card = document.getElementById(`card-${mode}`);
     if(card) card.classList.add('selected');
@@ -94,6 +96,22 @@ socket.on('updateState', (state) => {
     // Sync local settings if we aren't the host
     if(myRole !== 'host') currentSettings = state.settings;
 
+    // --- AUDIO LOGIC (Host Only) ---
+    if(myRole === 'host') {
+        const audio = document.getElementById('bg-music');
+        if(audio) {
+            // Play music if game is active (not in lobby, not gameover)
+            if(state.phase !== 'lobby' && state.phase !== 'gameover') {
+                if(audio.paused) {
+                    audio.play().catch(e => console.log("Audio play failed (interaction needed):", e));
+                }
+            } else {
+                audio.pause();
+                audio.currentTime = 0;
+            }
+        }
+    }
+
     if(myRole === 'host') handleHostState(state);
     if(myRole === 'player') handlePlayerState(state);
 });
@@ -101,7 +119,7 @@ socket.on('updateState', (state) => {
 // --- VIEW HANDLERS ---
 
 function handleHostState(state) {
-    // 1. Update Lobby List (Always)
+    // 1. Update Lobby List (Always visible in lobby mode)
     const list = document.getElementById('player-list');
     if(list) {
         list.innerHTML = state.players.map(p => `<li>${p.name}</li>`).join('');
@@ -114,6 +132,7 @@ function handleHostState(state) {
     const dashboardContainer = document.querySelector('.dashboard-panel');
     
     if(state.phase === 'lobby') {
+        // Show Lobby
         if(dashboardContainer) dashboardContainer.parentElement.style.display = 'flex';
     } 
     else {
@@ -208,14 +227,20 @@ function handlePlayerState(state) {
     }
     else if(state.phase === 'round_summary') {
         document.getElementById('player-status').style.display = 'none';
-        document.getElementById('player-feedback').style.display = 'block';
         
         const me = state.players.find(p => p.id === socket.id);
         const gained = me ? me.lastRoundPoints : 0;
         
-        const pointsText = document.getElementById('points-anim');
-        pointsText.innerText = gained > 0 ? `+${gained}` : "+0";
-        pointsText.style.color = gained > 0 ? '#2ed573' : '#333';
+        // Only show animation if points were gained
+        if(gained > 0) {
+             document.getElementById('player-feedback').style.display = 'block';
+             const pointsText = document.getElementById('points-anim');
+             pointsText.innerText = `+${gained}`;
+             pointsText.style.color = '#2ed573';
+        } else {
+             document.getElementById('player-status').style.display = 'block';
+             document.getElementById('player-status').innerText = "No points this round.";
+        }
         
         const sorted = [...state.players].sort((a,b) => b.score - a.score);
         const rank = sorted.findIndex(p => p.id === socket.id) + 1;
