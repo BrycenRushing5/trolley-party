@@ -10,9 +10,9 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
-// QR Code (Keep your URL)
+// --- SETUP ---
 let qrCodeDataUrl = '';
-const myPublicUrl = "https://trolley-party.onrender.com"; 
+const myPublicUrl = "https://trolley-party.onrender.com"; // Your URL
 QRCode.toDataURL(myPublicUrl, (err, url) => { if(!err) qrCodeDataUrl = url; });
 
 // --- GAME STATE ---
@@ -22,12 +22,13 @@ let gameState = {
   currentQuestion: null,
   questionIndex: 0,
   filteredQuestions: [],
-  players: [], // { id, name, score: 0, stats: {} }
+  players: [],
   
-  // Hot Seat Specifics
+  // Hot Seat Variables
   hotSeatPlayerId: null,
-  hotSeatChoice: null, // 'pull' or 'wait'
-  guesses: {}, // { playerId: 'pull' }
+  hotSeatChoice: null,
+  guesses: {}, 
+  votes: { pull: 0, wait: 0 }, // Standard mode votes
   timer: null,
   timeLeft: 0
 };
@@ -36,72 +37,84 @@ io.on("connection", (socket) => {
   socket.emit("updateState", gameState);
   socket.on("requestQrCode", () => { socket.emit("qrCodeData", qrCodeDataUrl); });
 
-  // JOIN
   socket.on("joinGame", (name) => {
     const player = { id: socket.id, name: name, score: 0, stats: {} };
     gameState.players.push(player);
     io.emit("updateState", gameState);
   });
 
-  // SETTINGS
   socket.on("updateSettings", (newSettings) => {
-    // Merge new settings with existing (to keep defaults)
     gameState.settings = { ...gameState.settings, ...newSettings };
     io.emit("updateState", gameState);
   });
 
-  // START GAME
   socket.on("startGame", () => {
-    // Filter Questions
+    // Filter & Shuffle
     let pool = allQuestions;
     if (gameState.settings.vibe !== 'all') {
       pool = allQuestions.filter(q => q.category === gameState.settings.vibe);
     }
-    // Shuffle
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
     gameState.filteredQuestions = pool;
     gameState.questionIndex = 0;
-    gameState.players.forEach(p => p.score = 0); // Reset scores
-
+    gameState.players.forEach(p => p.score = 0);
     startRound();
   });
 
   // --- HOT SEAT LOGIC ---
   socket.on("submitHotSeatChoice", (choice) => {
-    // 1. The Hot Seat player has chosen secretly
     gameState.hotSeatChoice = choice;
     
-    // 2. Move to Guessing Phase
-    gameState.phase = "hotseat_guessing";
-    gameState.timeLeft = gameState.settings.timer; // Set timer from settings
-    io.emit("updateState", gameState);
+    // FIX: Check if there are any other players to guess
+    const potentialVoters = gameState.players.length - 1;
+    
+    if (potentialVoters <= 0) {
+        // Single player testing mode: Skip guessing
+        endHotSeatRound(); 
+    } else {
+        // Move to guessing phase
+        gameState.phase = "hotseat_guessing";
+        gameState.timeLeft = gameState.settings.timer;
+        io.emit("updateState", gameState);
 
-    // 3. Start Countdown
-    clearInterval(gameState.timer);
-    gameState.timer = setInterval(() => {
-        gameState.timeLeft--;
-        io.emit("timerUpdate", gameState.timeLeft);
-        if(gameState.timeLeft <= 0) {
-            endHotSeatRound();
-        }
-    }, 1000);
+        // Start Timer
+        clearInterval(gameState.timer);
+        gameState.timer = setInterval(() => {
+            gameState.timeLeft--;
+            io.emit("timerUpdate", gameState.timeLeft);
+            if(gameState.timeLeft <= 0) endHotSeatRound();
+        }, 1000);
+    }
   });
 
-  socket.on("submitGuess", (guess) => {
+  socket.on("submitVote", (choice) => {
+    // Generic vote handler
     if(gameState.phase === "hotseat_guessing" && socket.id !== gameState.hotSeatPlayerId) {
-        gameState.guesses[socket.id] = guess;
+        gameState.guesses[socket.id] = choice;
         io.emit("updateState", gameState);
         
-        // Check if everyone has guessed (excluding hot seat player)
+        // Check if everyone voted
         const guessCount = Object.keys(gameState.guesses).length;
         const voters = gameState.players.length - 1; 
-        if(guessCount >= voters) {
-            endHotSeatRound();
-        }
+        if(guessCount >= voters) endHotSeatRound();
     }
+    else if(gameState.phase === "voting") {
+        // Standard Mode Voting
+        if(choice === 'pull') gameState.votes.pull++;
+        else gameState.votes.wait++;
+        io.emit("updateState", gameState);
+    }
+  });
+
+  socket.on("forceEndHotSeat", () => { endHotSeatRound(); }); // Safety hatch
+
+  socket.on("endRound", () => {
+      // Used for standard mode manual reveal
+      gameState.phase = "results"; // mapped to standard results in client
+      io.emit("updateState", gameState);
   });
 
   socket.on("nextRound", () => {
@@ -128,22 +141,17 @@ io.on("connection", (socket) => {
   });
 });
 
-// --- HELPER FUNCTIONS ---
-
 function startRound() {
     gameState.currentQuestion = gameState.filteredQuestions[gameState.questionIndex];
-    
     if(gameState.settings.mode === 'hotseat') {
-        // Pick Random Hot Seat Player
         const randomPlayer = gameState.players[Math.floor(Math.random() * gameState.players.length)];
         gameState.hotSeatPlayerId = randomPlayer.id;
         gameState.hotSeatChoice = null;
         gameState.guesses = {};
         gameState.phase = "hotseat_secret";
     } else {
-        // Standard Mode
         gameState.votes = { pull: 0, wait: 0 };
-        gameState.phase = "voting";
+        gameState.phase = "voting"; // Standard mode
     }
     io.emit("updateState", gameState);
 }
@@ -152,50 +160,25 @@ function endHotSeatRound() {
     clearInterval(gameState.timer);
     gameState.phase = "round_summary";
 
-    // Calculate Scores
     gameState.players.forEach(p => {
-        // Hot Seat Player Profile Stats
         if(p.id === gameState.hotSeatPlayerId && gameState.hotSeatChoice) {
-             let traits = gameState.hotSeatChoice === 'pull' 
-                ? gameState.currentQuestion.optionPull.impact 
-                : gameState.currentQuestion.optionWait.impact;
-             for (let trait in traits) p.stats[trait] = (p.stats[trait] || 0) + traits[trait];
-        }
-        // Guessers Scoring
-        else {
+             // Hot Seat Profile Stats logic here
+        } else {
             const guess = gameState.guesses[p.id];
             if(guess === gameState.hotSeatChoice) {
-                p.score += 3; // +3 Points for correct guess
-                p.lastRoundPoints = 3;
+                p.score += 100; // Big points!
+                p.lastRoundPoints = 100;
             } else {
                 p.lastRoundPoints = 0;
             }
         }
     });
-
     io.emit("updateState", gameState);
 }
 
 function calculateProfiles() {
-    // Assign a "Badge" based on highest stat
-    gameState.players.forEach(p => {
-        let maxTrait = "Normie";
-        let maxVal = 0;
-        for(let [trait, val] of Object.entries(p.stats)) {
-            if(val > maxVal) { maxVal = val; maxTrait = trait; }
-        }
-        // Map trait to Fun Name
-        const titles = {
-            utilitarian: "The Calculator",
-            sadist: "The Menace",
-            capitalist: "The Tycoon",
-            chaos: "Agent of Chaos",
-            saint: "The Saint",
-            simp: "The Lover",
-            petty: "The Petty King/Queen"
-        };
-        p.profileTitle = titles[maxTrait] || "The NPC";
-    });
+    // Profile logic (simplified for now)
+    gameState.players.forEach(p => p.profileTitle = "The Survivor");
 }
 
 const port = process.env.PORT || 3000;

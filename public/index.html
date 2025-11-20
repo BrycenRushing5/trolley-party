@@ -3,52 +3,7 @@
 <head>
   <title>Trolley Party</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-  
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/papercss@1.9.2/dist/paper.min.css">
-
-  <style>
-    /* --- GENERAL STYLES --- */
-    body, html { height: 100%; margin: 0; overflow: hidden; background-color: #f0f0f0; font-family: 'Patrick Hand', cursive; }
-    .container { display: flex; flex-direction: column; height: 100dvh; max-width: 100%; padding: 1rem; box-sizing: border-box; }
-    .main-content { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; overflow-y: auto; }
-    .screen { display: none; width: 100%; height: 100%; }
-    .active { display: flex; flex-direction: column; }
-
-    /* --- DASHBOARD --- */
-    .dashboard-panel { background: white; border: 3px solid #333; padding: 20px; width: 95%; max-width: 1000px; display: flex; flex-direction: row; gap: 20px; box-shadow: 10px 10px 0px #333; }
-    .col-left { flex: 1; border-right: 2px dashed #ccc; padding-right: 20px; text-align: center; }
-    .col-right { flex: 2; display: flex; flex-direction: column; gap: 15px;}
-    
-    .vibe-row { display: flex; gap: 10px; margin-bottom: 10px; }
-    .vibe-btn { flex: 1; padding: 10px; border: 2px solid #333; background: #fff; cursor: pointer; font-family: 'Patrick Hand', cursive; transition: transform 0.1s; }
-    .vibe-btn.selected { background: #ffeb3b; transform: rotate(-2deg); box-shadow: 3px 3px 0 #000;}
-
-    .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .mode-card { border: 2px solid #333; padding: 15px; cursor: pointer; background: #fff; font-family: 'Patrick Hand', cursive; position: relative; }
-    .mode-card.selected { background: #4ecdc4; color: white; border-color: black; box-shadow: 5px 5px 0px black; transform: translate(-2px, -2px); }
-    .mode-card.disabled { opacity: 0.5; cursor: not-allowed; background: #e0e0e0; }
-
-    /* Hot Seat Settings */
-    #hotseat-settings { display: none; border: 2px dashed #ff6b6b; padding: 10px; margin-top: 10px; background: #fff5f5; }
-    .setting-input { font-family: 'Patrick Hand', cursive; padding: 5px; font-size: 1.2rem; width: 60px; text-align: center; }
-
-    /* --- GAME UI --- */
-    #question-text { font-size: 4vh; line-height: 1.2; margin-bottom: 20px; text-align: center;}
-    .big-timer { font-size: 10vh; font-weight: bold; color: #ff4757; }
-    
-    .btn-pull { background-color: #ff4757 !important; color: white !important; }
-    .btn-wait { background-color: #2ed573 !important; color: white !important; }
-    .mobile-btn-container { display: flex; flex-direction: column; gap: 20px; width: 100%; height: 60%; }
-    .big-action-btn { flex: 1; font-size: 2rem; display: flex; align-items: center; justify-content: center; border: 3px solid black; }
-
-    /* --- LEADERBOARD --- */
-    .leaderboard-row { display: flex; justify-content: space-between; font-size: 1.5rem; border-bottom: 1px dashed #ccc; padding: 5px; width: 80%; }
-    .profile-badge { background: #333; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; transform: rotate(-5deg); display: inline-block;}
-  </style>
-</head>
+  <link rel="stylesheet" href="style.css"> </head>
 <body>
   <div class="container">
 
@@ -62,44 +17,55 @@
     </div>
 
     <div id="view-host" class="screen">
-      
       <div id="host-lobby" class="main-content">
         <div class="dashboard-panel">
             <div class="col-left">
                 <h3>Scan to Join</h3>
-                <img id="qr-code-img" src="" style="width: 150px; height: 150px; border: 3px dashed #333;">
+                <img id="qr-code-img" src="" alt="QR Code">
                 <h3>Players</h3>
-                <ul id="player-list" style="text-align: left; max-height: 200px; overflow-y: auto; list-style: none; padding:0;"></ul>
+                <ul id="player-list"></ul>
             </div>
             <div class="col-right">
-                <div>
-                    <label><strong>Choose the Vibe:</strong></label>
-                    <div class="vibe-row">
-                        <button class="vibe-btn selected" onclick="setVibe('all', this)">Everything</button>
-                        <button class="vibe-btn" onclick="setVibe('philosophy', this)">Philosophy</button>
-                        <button class="vibe-btn" onclick="setVibe('party', this)">Drunk Party</button>
-                        <button class="vibe-btn" onclick="setVibe('dark', this)">Dark Mode</button>
-                    </div>
-                </div>
+                
                 <div>
                     <label><strong>Select Game Mode:</strong></label>
                     <div class="mode-grid">
-                        <div class="mode-card" onclick="setMode('standard', this)"><h4>Standard</h4><p>Majority wins.</p></div>
-                        <div class="mode-card" onclick="setMode('hotseat', this)"><h4>Hot Seat</h4><p>Predict the player.</p></div>
-                        <div class="mode-card disabled"><h4>Debate</h4><p>Coming Soon</p></div>
-                        <div class="mode-card disabled"><h4>Identity</h4><p>Coming Soon</p></div>
-                    </div>
-                    
-                    <div id="hotseat-settings">
-                        <label>Debate Timer (sec): </label>
-                        <input type="number" id="set-timer" class="setting-input" value="180" onchange="updateSettings()">
-                        <br>
-                        <label>Rounds: </label>
-                        <input type="number" id="set-rounds" class="setting-input" value="5" onchange="updateSettings()">
-                        <br>
-                        <label><input type="checkbox" id="set-anon" onchange="updateSettings()"> Anonymous Voting</label>
+                        <div class="mode-card selected" id="card-standard" onclick="setMode('standard')">
+                            <h4>Standard</h4><p>Majority wins.</p>
+                        </div>
+                        <div class="mode-card" id="card-hotseat" onclick="setMode('hotseat')">
+                            <h4>Hot Seat</h4><p>Predict the player.</p>
+                        </div>
+                        <div class="mode-card disabled"><h4>Debate</h4><p>Soon</p></div>
+                        <div class="mode-card disabled"><h4>Identity</h4><p>Soon</p></div>
                     </div>
                 </div>
+
+                <div id="hotseat-settings" style="display: none;">
+                    <div class="setting-group">
+                        <span>⏱️ Time:</span>
+                        <input type="number" id="set-timer" class="setting-input" value="180" onchange="updateSettings()">
+                    </div>
+                    <div class="setting-group">
+                        <span>🔄 Rounds:</span>
+                        <input type="number" id="set-rounds" class="setting-input" value="5" onchange="updateSettings()">
+                    </div>
+                    <div class="setting-group">
+                        <input type="checkbox" id="set-anon" onchange="updateSettings()">
+                        <span>Anon Votes</span>
+                    </div>
+                </div>
+
+                <div class="vibe-container">
+                    <label><strong>Choose the Vibe:</strong></label>
+                    <div class="vibe-row">
+                        <button class="vibe-btn selected" id="vibe-all" onclick="setVibe('all')">All</button>
+                        <button class="vibe-btn" id="vibe-philosophy" onclick="setVibe('philosophy')">Smart</button>
+                        <button class="vibe-btn" id="vibe-party" onclick="setVibe('party')">Drunk</button>
+                        <button class="vibe-btn" id="vibe-dark" onclick="setVibe('dark')">Dark</button>
+                    </div>
+                </div>
+
                 <button class="btn btn-success btn-large" style="width:100%; margin-top: auto;" onclick="socket.emit('startGame')">START GAME</button>
             </div>
         </div>
@@ -119,6 +85,7 @@
             <div class="col-6" style="text-align:center;"><h2 style="color:#ff4757;">PULL</h2></div>
             <div class="col-6" style="text-align:center;"><h2 style="color:#2ed573;">NOTHING</h2></div>
         </div>
+        <button class="btn btn-small" onclick="socket.emit('forceEndHotSeat')" style="margin-top:20px; opacity:0.5;">force reveal</button>
       </div>
 
       <div id="host-summary" class="main-content" style="display:none;">
@@ -136,7 +103,24 @@
           <div id="final-leaderboard" style="width: 80%; max-width: 600px; background: white; padding: 20px; border: 3px solid black;"></div>
           <button class="btn btn-danger" style="margin-top:20px;" onclick="socket.emit('reset')">Back to Lobby</button>
       </div>
-
+      
+      <div id="host-game-standard" class="main-content" style="display:none;">
+        <h1 id="std-question-text">...</h1>
+        <div class="row" style="width: 100%;">
+          <div class="col-6" style="border-right: 2px dashed #ccc; text-align: center;">
+              <h2 style="color: #ff4757;">PULL</h2>
+              <div id="score-pull" class="vote-count">0</div>
+          </div>
+          <div class="col-6" style="text-align: center;">
+              <h2 style="color: #2ed573;">NOTHING</h2>
+              <div id="score-wait" class="vote-count">0</div>
+          </div>
+        </div>
+        <div style="margin-top: 30px; text-align: center;">
+             <button id="btn-reveal" class="btn btn-warning" onclick="socket.emit('endRound')">Reveal Results</button>
+             <button id="btn-next" class="btn btn-primary" style="display:none;" onclick="socket.emit('nextRound')">Next</button>
+        </div>
+      </div>
     </div>
 
     <div id="view-player" class="screen">
@@ -152,8 +136,8 @@
 
         <div id="guessing-buttons" class="mobile-btn-container" style="display:none;">
             <p style="text-align:center;">What did they pick?</p>
-            <button class="paper-btn btn-pull big-action-btn" onclick="submitGuess('pull')">THEY PULLED 💀</button>
-            <button class="paper-btn btn-wait big-action-btn" onclick="submitGuess('wait')">THEY WAITED 😇</button>
+            <button class="paper-btn btn-pull big-action-btn" onclick="submitVote('pull')">THEY PULLED 💀</button>
+            <button class="paper-btn btn-wait big-action-btn" onclick="submitVote('wait')">THEY WAITED 😇</button>
         </div>
 
         <div id="player-feedback" style="display:none; text-align:center;">
@@ -166,182 +150,5 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
-    let myRole = 'spectator';
-    let currentSettings = { vibe: 'all', mode: 'standard', timer: 180, rounds: 5, anon: false };
-
-    // --- ACTIONS ---
-    function joinGame() {
-      socket.emit('joinGame', document.getElementById('username').value || 'Guest');
-      myRole = 'player';
-      switchView('view-player');
-    }
-    function becomeHost() {
-      myRole = 'host';
-      switchView('view-host');
-      socket.emit('requestQrCode');
-    }
-    
-    function setVibe(vibe, el) {
-        currentSettings.vibe = vibe;
-        document.querySelectorAll('.vibe-btn').forEach(e => e.classList.remove('selected'));
-        el.classList.add('selected');
-        socket.emit('updateSettings', currentSettings);
-    }
-    function setMode(mode, el) {
-        if(el.classList.contains('disabled')) return;
-        currentSettings.mode = mode;
-        document.querySelectorAll('.mode-card').forEach(e => e.classList.remove('selected'));
-        el.classList.add('selected');
-        
-        // Show specific settings
-        document.getElementById('hotseat-settings').style.display = mode === 'hotseat' ? 'block' : 'none';
-        socket.emit('updateSettings', currentSettings);
-    }
-    function updateSettings() {
-        currentSettings.timer = parseInt(document.getElementById('set-timer').value);
-        currentSettings.rounds = parseInt(document.getElementById('set-rounds').value);
-        currentSettings.anon = document.getElementById('set-anon').checked;
-        socket.emit('updateSettings', currentSettings);
-    }
-
-    // --- GAMEPLAY ACTIONS ---
-    function submitHotSeat(choice) {
-        socket.emit('submitHotSeatChoice', choice);
-        document.getElementById('secret-buttons').style.display = 'none';
-        document.getElementById('player-status').innerText = "Shhh! Keep a straight face.";
-        document.getElementById('player-status').style.display = 'block';
-    }
-    function submitGuess(choice) {
-        socket.emit('submitGuess', choice);
-        document.getElementById('guessing-buttons').style.display = 'none';
-        document.getElementById('player-status').innerText = "Guess locked in.";
-        document.getElementById('player-status').style.display = 'block';
-    }
-
-    // --- SOCKET UPDATES ---
-    socket.on('qrCodeData', (url) => { if(myRole==='host') document.getElementById('qr-code-img').src = url; });
-    
-    socket.on('timerUpdate', (time) => {
-        const el = document.getElementById('timer-display');
-        if(el) el.innerText = time;
-    });
-
-    socket.on('updateState', (state) => {
-        if(myRole === 'host') handleHostState(state);
-        if(myRole === 'player') handlePlayerState(state);
-    });
-
-    function handleHostState(state) {
-        // Always update Lobby List
-        document.getElementById('player-list').innerHTML = state.players.map(p => `<li>${p.name}</li>`).join('');
-
-        if(state.phase === 'lobby') {
-            showHostSection('host-lobby');
-        } 
-        else if(state.phase === 'hotseat_secret') {
-            showHostSection('host-secret');
-            const target = state.players.find(p => p.id === state.hotSeatPlayerId);
-            document.getElementById('host-secret-msg').innerText = (target ? target.name : "Someone") + " is deciding...";
-        }
-        else if(state.phase === 'hotseat_guessing') {
-            showHostSection('host-guessing');
-            document.getElementById('question-text').innerText = state.currentQuestion.text;
-            const target = state.players.find(p => p.id === state.hotSeatPlayerId);
-            document.getElementById('target-name-display').innerText = target ? target.name : "Target";
-        }
-        else if(state.phase === 'round_summary') {
-            showHostSection('host-summary');
-            // Sort by score
-            const sorted = [...state.players].sort((a,b) => b.score - a.score);
-            document.getElementById('round-leaderboard').innerHTML = sorted.map((p, i) => 
-                `<div class="leaderboard-row"><span>#${i+1} ${p.name}</span><span>${p.score} pts</span></div>`
-            ).join('');
-            
-            const target = state.players.find(p => p.id === state.hotSeatPlayerId);
-            const choiceText = state.hotSeatChoice === 'pull' ? "PULLED THE LEVER!" : "DID NOTHING!";
-            document.getElementById('summary-text').innerText = `${target.name} chose to... ${choiceText}`;
-        }
-        else if(state.phase === 'gameover') {
-            showHostSection('host-gameover');
-            const sorted = [...state.players].sort((a,b) => b.score - a.score);
-            document.getElementById('final-leaderboard').innerHTML = sorted.map((p, i) => 
-                `<div class="leaderboard-row">
-                    <div>#${i+1} ${p.name} <span class="profile-badge">${p.profileTitle || 'Normie'}</span></div>
-                    <span>${p.score} pts</span>
-                 </div>`
-            ).join('');
-        }
-    }
-
-    function handlePlayerState(state) {
-        resetPlayerUI();
-        
-        if(state.phase === 'lobby') {
-            document.getElementById('player-status').innerText = "Host is changing settings...";
-        }
-        else if(state.phase === 'hotseat_secret') {
-            if(socket.id === state.hotSeatPlayerId) {
-                document.getElementById('player-status').style.display = 'none'; // Hide status
-                document.getElementById('secret-buttons').style.display = 'flex';
-                document.getElementById('mobile-question-text').innerText = state.currentQuestion.text;
-            } else {
-                const target = state.players.find(p => p.id === state.hotSeatPlayerId);
-                document.getElementById('player-status').innerText = `Waiting for ${target ? target.name : 'Target'}...`;
-            }
-        }
-        else if(state.phase === 'hotseat_guessing') {
-            if(socket.id === state.hotSeatPlayerId) {
-                document.getElementById('player-status').innerText = "Don't give it away!";
-            } else {
-                // Only show if haven't guessed yet
-                if(!state.guesses[socket.id]) {
-                    document.getElementById('player-status').style.display = 'none';
-                    document.getElementById('guessing-buttons').style.display = 'flex';
-                } else {
-                    document.getElementById('player-status').innerText = "Guess locked. Check TV.";
-                }
-            }
-        }
-        else if(state.phase === 'round_summary') {
-            document.getElementById('player-status').style.display = 'none';
-            document.getElementById('player-feedback').style.display = 'block';
-            
-            const me = state.players.find(p => p.id === socket.id);
-            const gained = me.lastRoundPoints || 0;
-            const pointsText = document.getElementById('points-anim');
-            pointsText.innerText = gained > 0 ? `+${gained}` : "+0";
-            pointsText.style.color = gained > 0 ? '#2ed573' : '#333';
-            
-            // Calculate Rank
-            const sorted = [...state.players].sort((a,b) => b.score - a.score);
-            const rank = sorted.findIndex(p => p.id === socket.id) + 1;
-            document.getElementById('rank-display').innerText = `Current Rank: ${rank}`;
-        }
-    }
-
-    function resetPlayerUI() {
-        document.getElementById('player-status').style.display = 'block';
-        document.getElementById('secret-buttons').style.display = 'none';
-        document.getElementById('guessing-buttons').style.display = 'none';
-        document.getElementById('player-feedback').style.display = 'none';
-    }
-
-    function switchView(id) {
-      document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
-      document.getElementById(id).classList.add('active');
-    }
-
-    function showHostSection(id) {
-        if(myRole !== 'host') return;
-        document.getElementById('host-lobby').style.display = 'none';
-        document.getElementById('host-secret').style.display = 'none';
-        document.getElementById('host-guessing').style.display = 'none';
-        document.getElementById('host-summary').style.display = 'none';
-        document.getElementById('host-gameover').style.display = 'none';
-        document.getElementById(id).style.display = 'flex';
-    }
-  </script>
-</body>
+  <script src="client.js"></script> </body>
 </html>

@@ -1,0 +1,100 @@
+/* --- IMPORTS --- */
+@import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
+@import url('https://unpkg.com/papercss@1.9.2/dist/paper.min.css');
+
+/* --- CORE LAYOUT --- */
+body, html {
+    height: 100%; margin: 0; overflow: hidden;
+    background-color: #f0f0f0; font-family: 'Patrick Hand', cursive;
+}
+.container {
+    display: flex; flex-direction: column; height: 100dvh;
+    max-width: 100%; padding: 1rem; box-sizing: border-box;
+}
+.main-content {
+    flex: 1; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; width: 100%;
+    overflow-y: auto; min-height: 0; /* Critical for flex scrolling */
+}
+.screen { display: none; width: 100%; height: 100%; }
+.active { display: flex; flex-direction: column; }
+
+/* --- HOST DASHBOARD --- */
+.dashboard-panel {
+    background: white; border: 3px solid #333;
+    padding: 20px; width: 95%; max-width: 1100px; height: 85vh;
+    display: flex; flex-direction: row; gap: 20px;
+    box-shadow: 10px 10px 0px #333;
+}
+
+/* Left Column (QR & Players) */
+.col-left {
+    flex: 1; border-right: 2px dashed #ccc; padding-right: 20px;
+    display: flex; flex-direction: column; align-items: center; /* Center QR */
+}
+#qr-code-img {
+    width: 180px; height: 180px; border: 3px dashed #333;
+    margin-bottom: 20px;
+}
+#player-list {
+    width: 100%; text-align: left; list-style: none; padding: 0;
+    overflow-y: auto; flex: 1; font-size: 1.2rem;
+}
+
+/* Right Column (Controls) */
+.col-right {
+    flex: 2; display: flex; flex-direction: column; gap: 10px;
+    min-height: 0; /* Allows inner scrolling if needed */
+}
+
+/* Mode Grid */
+.mode-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    flex: 1; /* Take available space */
+}
+.mode-card {
+    border: 2px solid #333; padding: 10px; cursor: pointer;
+    background: #fff; position: relative; transition: 0.2s;
+}
+.mode-card h4 { margin: 0; font-size: 1.3rem; }
+.mode-card p { margin: 0; font-size: 0.9rem; color: #666; }
+.mode-card.selected {
+    background: #4ecdc4; color: white; border-color: black;
+    box-shadow: 4px 4px 0px black; transform: translate(-2px, -2px);
+}
+.mode-card.disabled { opacity: 0.5; cursor: not-allowed; background: #eee; }
+
+/* COMPACT SETTINGS TOOLBAR (Fixing your scrolling issue) */
+#hotseat-settings {
+    display: none;
+    background: #fff5f5; border: 2px dashed #ff6b6b;
+    padding: 10px; font-size: 1rem;
+    display: flex; flex-direction: row; justify-content: space-around; align-items: center;
+}
+.setting-group { display: flex; align-items: center; gap: 5px; }
+.setting-input { width: 50px; text-align: center; padding: 2px; font-family: inherit; }
+
+/* Vibe Row (Moved to bottom) */
+.vibe-container { margin-top: 10px; }
+.vibe-row { display: flex; gap: 10px; }
+.vibe-btn {
+    flex: 1; padding: 8px; border: 2px solid #333; background: #fff;
+    cursor: pointer; font-family: inherit; font-size: 1rem;
+}
+.vibe-btn.selected { background: #ffeb3b; transform: rotate(-1deg); box-shadow: 2px 2px 0 #000; }
+
+/* --- GAMEPLAY UI --- */
+#question-text { font-size: 4vh; line-height: 1.2; margin-bottom: 20px; text-align: center;}
+.big-timer { font-size: 12vh; font-weight: bold; color: #ff4757; }
+.vote-count { font-size: 8vh; font-weight: bold; }
+
+.btn-pull { background-color: #ff4757 !important; color: white !important; }
+.btn-wait { background-color: #2ed573 !important; color: white !important; }
+
+.mobile-btn-container {
+    display: flex; flex-direction: column; gap: 20px; width: 100%; height: 60%;
+}
+.big-action-btn {
+    flex: 1; font-size: 2rem; display: flex;
+    align-items: center; justify-content: center; border: 3px solid black;
+}
