@@ -8,14 +8,19 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// SET UP EJS
+app.set('view engine', 'ejs');
 app.use(express.static("public"));
 
-// --- SETUP ---
+// Serve the EJS file on root load
+app.get('/', (req, res) => {
+    res.render('index');
+});
+
 let qrCodeDataUrl = '';
-const myPublicUrl = "https://trolley-party.onrender.com"; // Your URL
+const myPublicUrl = "https://trolley-party.onrender.com"; 
 QRCode.toDataURL(myPublicUrl, (err, url) => { if(!err) qrCodeDataUrl = url; });
 
-// --- GAME STATE ---
 let gameState = {
   phase: "lobby", 
   settings: { mode: "standard", vibe: "all", timer: 180, rounds: 5, anon: false },
@@ -23,12 +28,10 @@ let gameState = {
   questionIndex: 0,
   filteredQuestions: [],
   players: [],
-  
-  // Hot Seat Variables
   hotSeatPlayerId: null,
   hotSeatChoice: null,
   guesses: {}, 
-  votes: { pull: 0, wait: 0 }, // Standard mode votes
+  votes: { pull: 0, wait: 0 },
   timer: null,
   timeLeft: 0
 };
@@ -38,8 +41,11 @@ io.on("connection", (socket) => {
   socket.on("requestQrCode", () => { socket.emit("qrCodeData", qrCodeDataUrl); });
 
   socket.on("joinGame", (name) => {
-    const player = { id: socket.id, name: name, score: 0, stats: {} };
-    gameState.players.push(player);
+    // Check if reconnecting or new
+    const existing = gameState.players.find(p => p.id === socket.id);
+    if(!existing) {
+        gameState.players.push({ id: socket.id, name: name, score: 0, stats: {}, lastRoundPoints: 0 });
+    }
     io.emit("updateState", gameState);
   });
 
@@ -49,38 +55,29 @@ io.on("connection", (socket) => {
   });
 
   socket.on("startGame", () => {
-    // Filter & Shuffle
     let pool = allQuestions;
     if (gameState.settings.vibe !== 'all') {
       pool = allQuestions.filter(q => q.category === gameState.settings.vibe);
     }
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [pool[i], pool[j]] = [pool[j], pool[i]];
-    }
+    // Better shuffle
+    pool = pool.sort(() => Math.random() - 0.5);
     gameState.filteredQuestions = pool;
     gameState.questionIndex = 0;
     gameState.players.forEach(p => p.score = 0);
     startRound();
   });
 
-  // --- HOT SEAT LOGIC ---
   socket.on("submitHotSeatChoice", (choice) => {
     gameState.hotSeatChoice = choice;
-    
-    // FIX: Check if there are any other players to guess
     const potentialVoters = gameState.players.length - 1;
     
     if (potentialVoters <= 0) {
-        // Single player testing mode: Skip guessing
         endHotSeatRound(); 
     } else {
-        // Move to guessing phase
         gameState.phase = "hotseat_guessing";
         gameState.timeLeft = gameState.settings.timer;
         io.emit("updateState", gameState);
-
-        // Start Timer
+        
         clearInterval(gameState.timer);
         gameState.timer = setInterval(() => {
             gameState.timeLeft--;
@@ -90,33 +87,33 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("submitVote", (choice) => {
-    // Generic vote handler
+  socket.on("submitGuess", (choice) => {
     if(gameState.phase === "hotseat_guessing" && socket.id !== gameState.hotSeatPlayerId) {
         gameState.guesses[socket.id] = choice;
-        io.emit("updateState", gameState);
         
-        // Check if everyone voted
+        // --- AUTO ADVANCE LOGIC ---
         const guessCount = Object.keys(gameState.guesses).length;
-        const voters = gameState.players.length - 1; 
-        if(guessCount >= voters) endHotSeatRound();
+        const votersNeeded = gameState.players.length - 1; 
+        
+        io.emit("voterUpdate", { count: guessCount, total: votersNeeded }); // Send count to host
+
+        if(guessCount >= votersNeeded) {
+            endHotSeatRound();
+        }
     }
-    else if(gameState.phase === "voting") {
-        // Standard Mode Voting
-        if(choice === 'pull') gameState.votes.pull++;
-        else gameState.votes.wait++;
+  });
+
+  socket.on("forceEndHotSeat", () => { endHotSeatRound(); });
+
+  socket.on("submitVote", (choice) => {
+      if(gameState.phase === "voting") {
+        if(choice === 'pull') gameState.votes.pull++; else gameState.votes.wait++;
         io.emit("updateState", gameState);
-    }
+      }
   });
 
-  socket.on("forceEndHotSeat", () => { endHotSeatRound(); }); // Safety hatch
-
-  socket.on("endRound", () => {
-      // Used for standard mode manual reveal
-      gameState.phase = "results"; // mapped to standard results in client
-      io.emit("updateState", gameState);
-  });
-
+  socket.on("endRound", () => { gameState.phase = "results"; io.emit("updateState", gameState); });
+  
   socket.on("nextRound", () => {
       gameState.questionIndex++;
       if(gameState.questionIndex < gameState.settings.rounds && gameState.questionIndex < gameState.filteredQuestions.length) {
@@ -131,12 +128,14 @@ io.on("connection", (socket) => {
   socket.on("reset", () => {
     clearInterval(gameState.timer);
     gameState.phase = "lobby";
-    gameState.players.forEach(p => { p.score = 0; p.stats = {}; });
+    gameState.players.forEach(p => { p.score = 0; p.stats = {}; p.lastRoundPoints = 0; });
     io.emit("updateState", gameState);
   });
 
   socket.on("disconnect", () => {
     gameState.players = gameState.players.filter(p => p.id !== socket.id);
+    // Clean up guesses if a player leaves mid-round
+    delete gameState.guesses[socket.id];
     io.emit("updateState", gameState);
   });
 });
@@ -149,9 +148,10 @@ function startRound() {
         gameState.hotSeatChoice = null;
         gameState.guesses = {};
         gameState.phase = "hotseat_secret";
+        io.emit("voterUpdate", { count: 0, total: gameState.players.length - 1 });
     } else {
         gameState.votes = { pull: 0, wait: 0 };
-        gameState.phase = "voting"; // Standard mode
+        gameState.phase = "voting";
     }
     io.emit("updateState", gameState);
 }
@@ -160,13 +160,15 @@ function endHotSeatRound() {
     clearInterval(gameState.timer);
     gameState.phase = "round_summary";
 
+    // SCORING FIX
     gameState.players.forEach(p => {
-        if(p.id === gameState.hotSeatPlayerId && gameState.hotSeatChoice) {
-             // Hot Seat Profile Stats logic here
+        if(p.id === gameState.hotSeatPlayerId) {
+            p.lastRoundPoints = 0; // Hot seat doesn't get points for guessing themselves
         } else {
             const guess = gameState.guesses[p.id];
-            if(guess === gameState.hotSeatChoice) {
-                p.score += 100; // Big points!
+            // Ensure explicit string comparison
+            if(guess && guess === gameState.hotSeatChoice) {
+                p.score += 100;
                 p.lastRoundPoints = 100;
             } else {
                 p.lastRoundPoints = 0;
@@ -177,7 +179,6 @@ function endHotSeatRound() {
 }
 
 function calculateProfiles() {
-    // Profile logic (simplified for now)
     gameState.players.forEach(p => p.profileTitle = "The Survivor");
 }
 

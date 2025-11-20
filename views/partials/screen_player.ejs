@@ -1,0 +1,23 @@
+<div id="view-player" class="screen">
+    <div class="main-content">
+      <h2 id="player-status" style="text-align:center; margin-bottom:20px;">Waiting...</h2>
+      
+      <div id="secret-buttons" class="mobile-btn-container" style="display:none;">
+          <p style="text-align:center; font-weight:bold;">YOU are in the Hot Seat!</p>
+          <p id="mobile-question-text" style="text-align:center; font-size: 1.2rem;">...</p>
+          <button class="paper-btn btn-pull big-action-btn" onclick="submitHotSeat('pull')">PULL 💀</button>
+          <button class="paper-btn btn-wait big-action-btn" onclick="submitHotSeat('wait')">NOTHING 😇</button>
+      </div>
+  
+      <div id="guessing-buttons" class="mobile-btn-container" style="display:none;">
+          <p style="text-align:center;">What did they pick?</p>
+          <button class="paper-btn btn-pull big-action-btn" onclick="submitVote('pull')">THEY PULLED 💀</button>
+          <button class="paper-btn btn-wait big-action-btn" onclick="submitVote('wait')">THEY WAITED 😇</button>
+      </div>
+  
+      <div id="player-feedback" style="display:none; text-align:center;">
+          <h1 id="points-anim" style="font-size: 4rem;">+0</h1>
+          <h3 id="rank-display">Rank: --</h3>
+      </div>
+    </div>
+  </div>

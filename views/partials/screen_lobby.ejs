@@ -1,0 +1,46 @@
+<div id="view-host" class="screen">
+    <div id="host-lobby" class="main-content">
+      <div class="dashboard-panel">
+          <div class="col-left">
+              <h3>Scan to Join</h3>
+              <img id="qr-code-img" src="" alt="QR Code">
+              <h3>Players</h3>
+              <ul id="player-list"></ul>
+          </div>
+          <div class="col-right">
+              
+              <div style="flex: 1;">
+                  <label><strong>Select Game Mode:</strong></label>
+                  <div class="mode-grid">
+                      <div class="mode-card selected" id="card-standard" onclick="setMode('standard')">
+                          <h4>Standard</h4><p>Majority wins.</p>
+                      </div>
+                      <div class="mode-card" id="card-hotseat" onclick="setMode('hotseat')">
+                          <h4>Hot Seat</h4><p>Predict the player.</p>
+                      </div>
+                      <div class="mode-card disabled"><h4>Debate</h4><p>Soon</p></div>
+                      <div class="mode-card disabled"><h4>Identity</h4><p>Soon</p></div>
+                  </div>
+              </div>
+  
+              <div id="hotseat-settings" style="display: none; margin: 10px 0;">
+                  <div class="setting-group"><span>⏱️ Time:</span><input type="number" id="set-timer" class="setting-input" value="180" onchange="updateSettings()"></div>
+                  <div class="setting-group"><span>🔄 Rounds:</span><input type="number" id="set-rounds" class="setting-input" value="5" onchange="updateSettings()"></div>
+                  <div class="setting-group"><input type="checkbox" id="set-anon" onchange="updateSettings()"><span>Anon</span></div>
+              </div>
+  
+              <div class="vibe-container" style="margin-top: auto;">
+                  <label><strong>Choose the Vibe:</strong></label>
+                  <div class="vibe-row">
+                      <button class="vibe-btn selected" id="vibe-all" onclick="setVibe('all')">All</button>
+                      <button class="vibe-btn" id="vibe-philosophy" onclick="setVibe('philosophy')">Smart</button>
+                      <button class="vibe-btn" id="vibe-party" onclick="setVibe('party')">Drunk</button>
+                      <button class="vibe-btn" id="vibe-dark" onclick="setVibe('dark')">Dark</button>
+                  </div>
+              </div>
+  
+              <button class="btn btn-success btn-large" style="width:100%; margin-top: 10px;" onclick="socket.emit('startGame')">START GAME</button>
+          </div>
+      </div>
+    </div>
+    </div>

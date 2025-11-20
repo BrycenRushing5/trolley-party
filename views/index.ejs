@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Trolley Party</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div id="view-login" class="screen active main-content">
+      <h1>Absurd Trolley</h1>
+      <input type="text" id="username" placeholder="Enter Name" style="text-align:center; font-size: 1.5rem; margin-bottom: 20px;">
+      <button class="btn btn-primary" onclick="joinGame()">Join Party</button>
+      <div style="margin-top: 50px; opacity: 0.6;">
+          <button class="btn btn-small" onclick="becomeHost()">I am the Host (TV)</button>
+      </div>
+    </div>
+
+    <%- include('partials/screen_lobby') %>
+    <%- include('partials/screen_host') %>
+    <%- include('partials/screen_player') %>
+
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="client.js"></script>
+</body>
+</html>

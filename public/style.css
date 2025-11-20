@@ -7,17 +7,30 @@ body, html {
     height: 100%; margin: 0; overflow: hidden;
     background-color: #f0f0f0; font-family: 'Patrick Hand', cursive;
 }
+
 .container {
     display: flex; flex-direction: column; height: 100dvh;
     max-width: 100%; padding: 1rem; box-sizing: border-box;
 }
+
 .main-content {
     flex: 1; display: flex; flex-direction: column;
     justify-content: center; align-items: center; width: 100%;
-    overflow-y: auto; min-height: 0; /* Critical for flex scrolling */
+    overflow-y: auto; min-height: 0; 
 }
+
 .screen { display: none; width: 100%; height: 100%; }
 .active { display: flex; flex-direction: column; }
+
+/* CRITICAL: Allows us to hide/show game screens easily */
+.screen-overlay { 
+    display: none; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center; 
+    height: 100%; 
+    width: 100%; 
+}
 
 /* --- HOST DASHBOARD --- */
 .dashboard-panel {
@@ -30,7 +43,7 @@ body, html {
 /* Left Column (QR & Players) */
 .col-left {
     flex: 1; border-right: 2px dashed #ccc; padding-right: 20px;
-    display: flex; flex-direction: column; align-items: center; /* Center QR */
+    display: flex; flex-direction: column; align-items: center;
 }
 #qr-code-img {
     width: 180px; height: 180px; border: 3px dashed #333;
@@ -44,19 +57,20 @@ body, html {
 /* Right Column (Controls) */
 .col-right {
     flex: 2; display: flex; flex-direction: column; gap: 10px;
-    min-height: 0; /* Allows inner scrolling if needed */
+    min-height: 0;
 }
 
-/* Mode Grid */
+/* Mode Grid (Made Bigger) */
 .mode-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-    flex: 1; /* Take available space */
+    display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
+    flex: 2; /* Push to take available space */
 }
 .mode-card {
-    border: 2px solid #333; padding: 10px; cursor: pointer;
+    border: 2px solid #333; padding: 20px; cursor: pointer;
     background: #fff; position: relative; transition: 0.2s;
+    display: flex; flex-direction: column; justify-content: center;
 }
-.mode-card h4 { margin: 0; font-size: 1.3rem; }
+.mode-card h4 { margin: 0; font-size: 1.6rem; }
 .mode-card p { margin: 0; font-size: 0.9rem; color: #666; }
 .mode-card.selected {
     background: #4ecdc4; color: white; border-color: black;
@@ -64,22 +78,22 @@ body, html {
 }
 .mode-card.disabled { opacity: 0.5; cursor: not-allowed; background: #eee; }
 
-/* COMPACT SETTINGS TOOLBAR (Fixing your scrolling issue) */
+/* COMPACT SETTINGS TOOLBAR */
 #hotseat-settings {
     display: none;
     background: #fff5f5; border: 2px dashed #ff6b6b;
     padding: 10px; font-size: 1rem;
-    display: flex; flex-direction: row; justify-content: space-around; align-items: center;
+    flex-direction: row; justify-content: space-around; align-items: center;
 }
 .setting-group { display: flex; align-items: center; gap: 5px; }
 .setting-input { width: 50px; text-align: center; padding: 2px; font-family: inherit; }
 
-/* Vibe Row (Moved to bottom) */
-.vibe-container { margin-top: 10px; }
+/* Vibe Row (At Bottom) */
+.vibe-container { margin-top: auto; }
 .vibe-row { display: flex; gap: 10px; }
 .vibe-btn {
-    flex: 1; padding: 8px; border: 2px solid #333; background: #fff;
-    cursor: pointer; font-family: inherit; font-size: 1rem;
+    flex: 1; padding: 15px; border: 2px solid #333; background: #fff;
+    cursor: pointer; font-family: inherit; font-size: 1.1rem;
 }
 .vibe-btn.selected { background: #ffeb3b; transform: rotate(-1deg); box-shadow: 2px 2px 0 #000; }
 
