@@ -1,6 +1,7 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
+const path = require("path");
 const QRCode = require('qrcode');
 const allQuestions = require('./questions');
 const HotSeatManager = require('./modes/HotSeatManager');
@@ -10,13 +11,13 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.set('view engine', 'ejs');
-app.use(express.static("public"));
-app.get('/', (req, res) => res.render('index'));
+// 1. SERVE REACT BUILD
+const clientBuildPath = path.join(__dirname, "../client/dist");
+app.use(express.static(clientBuildPath));
 
 // QR Code
 let qrCodeDataUrl = '';
-const myPublicUrl = "https://trolley-party.onrender.com"; 
+const myPublicUrl = process.env.RENDER_EXTERNAL_URL || "http://localhost:3000";
 QRCode.toDataURL(myPublicUrl, (err, url) => { if(!err) qrCodeDataUrl = url; });
 
 // Global State
@@ -24,15 +25,14 @@ let gameState = {
   phase: "lobby", 
   settings: { mode: "standard", vibe: "all", timer: 180, rounds: 5, anon: false },
   players: [],
-  // Mode specific data is handled by managers, but we keep shared state here
   questionIndex: 0,
   filteredQuestions: [],
   guesses: {},
   votes: { pull: 0, wait: 0 },
-  hotSeatPlayerId: null
+  hotSeatPlayerId: null,
+  roundResults: null
 };
 
-// Initialize Managers
 const managers = {
     hotseat: new HotSeatManager(gameState, io),
     standard: new StandardManager(gameState, io)
@@ -56,41 +56,28 @@ io.on("connection", (socket) => {
   });
 
   socket.on("startGame", () => {
-    // Filter questions
     let pool = allQuestions;
     if (gameState.settings.vibe !== 'all') pool = allQuestions.filter(q => q.category === gameState.settings.vibe);
     pool = pool.sort(() => Math.random() - 0.5);
-    
     gameState.filteredQuestions = pool;
     gameState.questionIndex = 0;
     gameState.players.forEach(p => p.score = 0);
-    
     startRound();
   });
 
-  // --- ROUTING LOGIC ---
-  socket.on("submitHotSeatChoice", (choice) => {
-      if(gameState.settings.mode === 'hotseat') managers.hotseat.handleChoice(socket.id, choice);
-  });
-
-  socket.on("submitGuess", (choice) => {
-      if(gameState.settings.mode === 'hotseat') managers.hotseat.handleGuess(socket.id, choice);
-  });
-
-  socket.on("submitVote", (choice) => {
-      if(gameState.settings.mode === 'standard') managers.standard.handleVote(socket.id, choice);
-  });
-
+  socket.on("submitHotSeatChoice", (choice) => { if(gameState.settings.mode === 'hotseat') managers.hotseat.handleChoice(socket.id, choice); });
+  socket.on("submitGuess", (choice) => { if(gameState.settings.mode === 'hotseat') managers.hotseat.handleGuess(socket.id, choice); });
+  socket.on("submitVote", (choice) => { if(gameState.settings.mode === 'standard') managers.standard.handleVote(socket.id, choice); });
   socket.on("forceEndHotSeat", () => managers.hotseat.endRound());
   socket.on("endRound", () => managers.standard.endRound());
 
   socket.on("nextRound", () => {
+      if(gameState.settings.mode === 'hotseat') managers.hotseat.cleanup();
       gameState.questionIndex++;
       if(gameState.questionIndex < gameState.settings.rounds && gameState.questionIndex < gameState.filteredQuestions.length) {
           startRound();
       } else {
           gameState.phase = "gameover";
-          managers.hotseat.cleanup(); // Stop timers
           io.emit("updateState", gameState);
       }
   });
@@ -110,13 +97,14 @@ io.on("connection", (socket) => {
 
 function startRound() {
     const q = gameState.filteredQuestions[gameState.questionIndex];
-    // Delegate to the active manager
-    if(gameState.settings.mode === 'hotseat') {
-        managers.hotseat.startRound(q);
-    } else {
-        managers.standard.startRound(q);
-    }
+    if(gameState.settings.mode === 'hotseat') managers.hotseat.startRound(q);
+    else managers.standard.startRound(q);
 }
+
+// CATCH ALL FOR REACT ROUTER (Required for SPA)
+app.get("*", (req, res) => {
+    res.sendFile(path.join(clientBuildPath, "index.html"));
+});
 
 const port = process.env.PORT || 3000;
 server.listen(port, () => console.log(`Server running on port ${port}`));
