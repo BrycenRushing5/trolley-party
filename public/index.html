@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Trolley Party</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://unpkg.com/papercss@1.9.2/dist/paper.min.css">
+
+  <style>
+    /* Apply the font to everything */
+    body { 
+        font-family: 'Patrick Hand', cursive;
+        text-align: center; 
+        padding: 20px; 
+        background-color: #f0f0f0; /* A light gray background */
+        font-size: 1.2rem;
+    }
+    
+    /* Override PaperCSS container for full width on mobile */
+    .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background-color: #fff; /* White paper look */
+        padding: 2rem;
+    }
+
+    /* Custom styles for our screens */
+    .screen { display: none; }
+    .active { display: block; }
+
+    /* Styling the buttons with PaperCSS classes */
+    .btn-large { 
+        padding: 20px 40px; 
+        font-size: 24px; 
+        margin: 15px; 
+        width: 80%;
+        max-width: 300px;
+    }
+    .btn-a { background-color: #ff6b6b !important; color: white !important; }
+    .btn-b { background-color: #4ecdc4 !important; color: white !important; }
+    
+    /* Styling for the host screen elements */
+    #player-list { list-style: none; padding: 0; font-size: 1.5rem;}
+    #player-list li { margin-bottom: 0.5rem; }
+    .vote-count { font-size: 60px; font-weight: bold; }
+    
+    /* QR Code image style */
+    #qr-code-img {
+        width: 200px;
+        height: 200px;
+        margin-top: 20px;
+        border: 3px dashed #333; /* Adds a hand-drawn border look */
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container paper"> <div id="view-login" class="screen active">
+      <h1>Absurd Trolley Problems</h1>
+      <div class="form-group">
+          <input type="text" id="username" placeholder="Enter Name" style="font-family: 'Patrick Hand', cursive; font-size: 1.5rem; text-align:center;">
+      </div>
+      <br>
+      <button class="btn btn-primary btn-large" onclick="joinGame()">Join as Player</button>
+      <br><hr><br>
+      <p>Or if you are the big screen:</p>
+      <button class="btn btn-secondary" onclick="becomeHost()">I am the Host (TV)</button>
+    </div>
+
+    <div id="view-host" class="screen">
+      <h2>Join the Party!</h2>
+      <p>Scan to join:</p>
+      <img id="qr-code-img" src="" alt="Loading QR Code...">
+      <br><br>
+      <h3>Waiting for players...</h3>
+      <ul id="player-list"></ul>
+      
+      <div id="host-voting-ui" style="display:none;">
+        <h1 id="question-text" style="font-size: 3rem;">Pull the lever?</h1>
+        <div class="row flex-center">
+          <div class="col-6 col-md-4">
+              <h2 style="color: #ff6b6b;">Option A</h2>
+              <div id="score-a" class="vote-count">0</div>
+          </div>
+          <div class="col-6 col-md-4">
+              <h2 style="color: #4ecdc4;">Option B</h2>
+              <div id="score-b" class="vote-count">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:50px; border-top: 2px dashed #ccc; padding-top: 20px;">
+        <p>Host Controls:</p>
+        <button class="btn btn-success" onclick="socket.emit('startGame')">Start Voting</button>
+        <button class="btn btn-warning" onclick="socket.emit('endRound')">Show Results</button>
+        <button class="btn btn-danger" onclick="socket.emit('reset')">Reset Round</button>
+      </div>
+    </div>
+
+    <div id="view-player" class="screen">
+      <h2 id="player-status" style="font-size: 2rem;">Waiting for Host...</h2>
+      
+      <div id="voting-buttons" style="display:none; margin-top: 50px;">
+        <button class="paper-btn btn-a btn-large" onclick="vote('A')">VOTE A</button>
+        <br>
+        <button class="paper-btn btn-b btn-large" onclick="vote('B')">VOTE B</button>
+      </div>
+    </div>
+
+  </div> <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let myRole = 'spectator';
+
+    // --- USER ACTIONS ---
+    function joinGame() {
+      const name = document.getElementById('username').value || 'Guest';
+      socket.emit('joinGame', name);
+      myRole = 'player';
+      switchView('view-player');
+    }
+
+    function becomeHost() {
+      myRole = 'host';
+      switchView('view-host');
+      // Ask the server for the QR code
+      socket.emit('requestQrCode');
+    }
+
+    function vote(choice) {
+      if(myRole === 'player') {
+        socket.emit('vote', choice);
+        document.getElementById('voting-buttons').style.display = 'none';
+        document.getElementById('player-status').innerText = "Vote Cast! Look at the TV.";
+      }
+    }
+
+    // --- SERVER UPDATES ---
+    // Listen for the QR code data from the server
+    socket.on('qrCodeData', (dataUrl) => {
+        if (myRole === 'host') {
+            document.getElementById('qr-code-img').src = dataUrl;
+        }
+    });
+
+    socket.on('updateState', (state) => {
+      // Update Player List
+      document.getElementById('player-list').innerHTML = state.players.map(p => `<li>${p.name}</li>`).join('');
+
+      // Update Scores
+      document.getElementById('score-a').innerText = state.votes.A;
+      document.getElementById('score-b').innerText = state.votes.B;
+
+      // Handle Phases
+      if (state.phase === 'lobby') {
+        document.getElementById('host-voting-ui').style.display = 'none';
+        document.getElementById('qr-code-img').style.display = 'inline'; // Show QR in lobby
+        if (myRole === 'player') {
+            document.getElementById('player-status').innerText = "Waiting for Host to start...";
+            document.getElementById('voting-buttons').style.display = 'none';
+        }
+      } 
+      else if (state.phase === 'voting') {
+        document.getElementById('qr-code-img').style.display = 'none'; // Hide QR during voting
+        document.getElementById('host-voting-ui').style.display = 'block';
+        if (myRole === 'player') {
+            document.getElementById('player-status').innerText = "Cast your vote!";
+            document.getElementById('voting-buttons').style.display = 'block';
+        }
+      }
+      else if (state.phase === 'results') {
+        if (myRole === 'player') {
+            document.getElementById('player-status').innerText = "Look at the TV for results!";
+            document.getElementById('voting-buttons').style.display = 'none';
+        }
+      }
+    });
+
+    function switchView(viewId) {
+      document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+      document.getElementById(viewId).classList.add('active');
+    }
+  </script>
+</body>
+</html>
