@@ -92,6 +92,15 @@ socket.on('voterUpdate', (data) => {
     if(el) el.innerText = `${data.count} / ${data.total} Voted`;
 });
 
+// Listen for the 10s auto-advance trigger from server
+socket.on('forceNextRound', () => {
+    // Only the host acts on this to prevent duplicate signals
+    if(myRole === 'host') {
+        console.log("Auto-advancing round...");
+        socket.emit('nextRound');
+    }
+});
+
 socket.on('updateState', (state) => {
     // Sync local settings if we aren't the host
     if(myRole !== 'host') currentSettings = state.settings;
@@ -119,81 +128,94 @@ socket.on('updateState', (state) => {
 // --- VIEW HANDLERS ---
 
 function handleHostState(state) {
+    console.log("Host State Phase:", state.phase); // Debug log
+
     // 1. Update Lobby List (Always visible in lobby mode)
     const list = document.getElementById('player-list');
     if(list) {
         list.innerHTML = state.players.map(p => `<li>${p.name}</li>`).join('');
     }
 
-    // 2. Manage Views (Dashboard vs Game Screens)
-    
-    // Helper: Hide everything first
+    // 2. MANAGE VIEWS
+    // First, hide ALL possible overlays
     document.querySelectorAll('.screen-overlay').forEach(el => el.style.display = 'none');
+    
+    // Hide dashboard container by default (we show it only in lobby)
     const dashboardContainer = document.querySelector('.dashboard-panel');
+    if(dashboardContainer) dashboardContainer.parentElement.style.display = 'none';
     
     if(state.phase === 'lobby') {
         // Show Lobby
         if(dashboardContainer) dashboardContainer.parentElement.style.display = 'flex';
     } 
-    else {
-        // Hide Lobby
-        if(dashboardContainer) dashboardContainer.parentElement.style.display = 'none';
-
-        // Show Specific Game Screen based on phase
-        if(state.phase === 'hotseat_secret') {
-             document.getElementById('host-secret').style.display = 'flex';
-             const target = state.players.find(p => p.id === state.hotSeatPlayerId);
-             document.getElementById('host-secret-msg').innerText = (target ? target.name : "Someone") + " is deciding...";
-        }
-        else if(state.phase === 'hotseat_guessing') {
-             document.getElementById('host-guessing').style.display = 'flex';
-             document.getElementById('question-text').innerText = state.currentQuestion.text;
-             const target = state.players.find(p => p.id === state.hotSeatPlayerId);
-             document.getElementById('target-name-display').innerText = target ? target.name : "Target";
-        }
-        else if(state.phase === 'round_summary') {
-             document.getElementById('host-summary').style.display = 'flex';
+    else if(state.phase === 'hotseat_secret') {
+         document.getElementById('host-secret').style.display = 'flex';
+         const target = state.players.find(p => p.id === state.hotSeatPlayerId);
+         document.getElementById('host-secret-msg').innerText = (target ? target.name : "Someone") + " is deciding...";
+    }
+    else if(state.phase === 'hotseat_guessing') {
+         document.getElementById('host-guessing').style.display = 'flex';
+         document.getElementById('question-text').innerText = state.currentQuestion.text;
+         const target = state.players.find(p => p.id === state.hotSeatPlayerId);
+         document.getElementById('target-name-display').innerText = target ? target.name : "Target";
+    }
+    else if(state.phase === 'round_summary') {
+         document.getElementById('host-summary').style.display = 'flex';
+         
+         // --- DETAILED SUMMARY ---
+         const results = state.roundResults;
+         const summaryText = document.getElementById('summary-text');
+         
+         if(results) {
+             const action = results.choice === 'pull' ? "PULLED THE LEVER 💀" : "DID NOTHING 😇";
+             let winnerText = "";
              
-             // Populate Leaderboard
-             const sorted = [...state.players].sort((a,b) => b.score - a.score);
-             document.getElementById('round-leaderboard').innerHTML = sorted.map((p, i) => 
-                `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ccc; padding:5px; font-size: 1.5rem;">
-                    <span>#${i+1} ${p.name}</span><span>${p.score} pts</span>
-                 </div>`
-             ).join('');
-             
-             // Summary Text
-             const target = state.players.find(p => p.id === state.hotSeatPlayerId);
-             if(target) {
-                 const choiceText = state.hotSeatChoice === 'pull' ? "PULLED THE LEVER!" : "DID NOTHING!";
-                 document.getElementById('summary-text').innerText = `${target.name} chose to... ${choiceText}`;
+             if(results.correctPlayers.length === 0) {
+                 winnerText = "No one guessed correctly!";
+             } else {
+                 winnerText = "Correct Guesses: " + results.correctPlayers.join(", ");
              }
-        }
-        else if(state.phase === 'voting') {
-             // Standard Mode
-             document.getElementById('host-game-standard').style.display = 'flex';
-             document.getElementById('std-question-text').innerText = state.currentQuestion.text;
-             document.getElementById('score-pull').innerText = state.votes.pull;
-             document.getElementById('score-wait').innerText = state.votes.wait;
              
-             document.getElementById('btn-reveal').style.display = 'inline-block';
-             document.getElementById('btn-next').style.display = 'none';
-        }
-        else if(state.phase === 'results') {
-             // Standard Results
-             document.getElementById('host-game-standard').style.display = 'flex';
-             document.getElementById('btn-reveal').style.display = 'none';
-             document.getElementById('btn-next').style.display = 'inline-block';
-        }
-        else if(state.phase === 'gameover') {
-            document.getElementById('host-gameover').style.display = 'flex';
-            const sorted = [...state.players].sort((a,b) => b.score - a.score);
-            document.getElementById('final-leaderboard').innerHTML = sorted.map((p, i) => 
-                `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #000; padding:10px; font-size: 1.5rem;">
-                    <span>#${i+1} ${p.name}</span><span>${p.score} pts</span>
-                 </div>`
-            ).join('');
-        }
+             summaryText.innerHTML = `
+                <div style="font-size: 1.5rem; font-weight:bold; color: #333; margin-bottom: 10px;">${results.hotSeatName} decided to...</div>
+                <div style="font-size: 2.5rem; font-weight:bold; color: ${results.choice === 'pull' ? '#ff4757' : '#2ed573'}">${action}</div>
+                <br>
+                <div style="font-size: 1.2rem; color: #555;">${winnerText}</div>
+             `;
+         }
+
+         // Populate Leaderboard
+         const sorted = [...state.players].sort((a,b) => b.score - a.score);
+         document.getElementById('round-leaderboard').innerHTML = sorted.map((p, i) => 
+            `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #ccc; padding:5px; font-size: 1.5rem;">
+                <span>#${i+1} ${p.name}</span><span>${p.score} pts</span>
+             </div>`
+         ).join('');
+    }
+    else if(state.phase === 'voting') {
+         // Standard Mode
+         document.getElementById('host-game-standard').style.display = 'flex';
+         document.getElementById('std-question-text').innerText = state.currentQuestion.text;
+         document.getElementById('score-pull').innerText = state.votes.pull;
+         document.getElementById('score-wait').innerText = state.votes.wait;
+         
+         document.getElementById('btn-reveal').style.display = 'inline-block';
+         document.getElementById('btn-next').style.display = 'none';
+    }
+    else if(state.phase === 'results') {
+         // Standard Results
+         document.getElementById('host-game-standard').style.display = 'flex';
+         document.getElementById('btn-reveal').style.display = 'none';
+         document.getElementById('btn-next').style.display = 'inline-block';
+    }
+    else if(state.phase === 'gameover') {
+        document.getElementById('host-gameover').style.display = 'flex';
+        const sorted = [...state.players].sort((a,b) => b.score - a.score);
+        document.getElementById('final-leaderboard').innerHTML = sorted.map((p, i) => 
+            `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #000; padding:10px; font-size: 1.5rem;">
+                <span>#${i+1} ${p.name}</span><span>${p.score} pts</span>
+             </div>`
+        ).join('');
     }
 }
 

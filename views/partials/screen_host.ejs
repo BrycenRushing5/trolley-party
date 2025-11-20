@@ -2,17 +2,17 @@
     <source src="https://upload.wikimedia.org/wikipedia/commons/5/5c/The_Entertainer_-_Scott_Joplin.ogg" type="audio/ogg">
 </audio>
 
-<div id="host-secret" class="main-content screen-overlay">
+<div id="host-secret" class="main-content screen-overlay" style="display:none;">
   <h1>🤫 Shhh...</h1>
-  <h2 id="host-secret-msg">Player is deciding...</h2>
-  <div style="font-size: 5rem;">👀</div>
+  <h2 id="host-secret-msg" style="font-size: 3rem;">Player is deciding...</h2>
+  <div style="font-size: 8rem;">👀</div>
 </div>
 
-<div id="host-guessing" class="main-content screen-overlay">
+<div id="host-guessing" class="main-content screen-overlay" style="display:none;">
   <div id="timer-display" class="big-timer">--</div>
   <h2 style="margin-top:0;">Guess what <span id="target-name-display" style="text-decoration: underline;"></span> chose!</h2>
   
-  <div id="voter-count-display" style="background:black; color:white; padding: 5px 15px; border-radius: 20px; margin-bottom: 10px; font-size: 1.5rem;">
+  <div id="voter-count-display" style="background:black; color:white; padding: 10px 30px; border-radius: 50px; margin-bottom: 20px; font-size: 2rem;">
       Waiting for votes...
   </div>
 
@@ -24,36 +24,24 @@
   <button class="btn btn-small" onclick="socket.emit('forceEndHotSeat')" style="margin-top:20px; opacity:0.5;">force reveal</button>
 </div>
 
-<div id="host-summary" class="main-content screen-overlay">
-  <h1>Round Results!</h1>
-  <h2 id="summary-text">...</h2>
-  <div style="border: 2px solid #333; padding: 20px; background: white; width: 60%;">
+<div id="host-summary" class="main-content screen-overlay" style="display:none;">
+  <div style="text-align:center; margin-bottom: 20px;">
+      <h2 id="summary-text">Loading Results...</h2>
+  </div>
+  
+  <div style="border: 3px solid #333; padding: 20px; background: white; width: 80%; max-width: 600px;">
       <h3>Leaderboard</h3>
       <div id="round-leaderboard"></div>
   </div>
-  <button class="btn btn-primary" style="margin-top:20px;" onclick="socket.emit('nextRound')">Next Round</button>
+  <div style="margin-top: 10px; font-size: 0.8rem; color: #666;">Auto-advancing in 10s...</div>
+  <button class="btn btn-primary" style="margin-top:10px;" onclick="socket.emit('nextRound')">Next Round Now</button>
 </div>
 
-<div id="host-gameover" class="main-content screen-overlay">
+<div id="host-gameover" class="main-content screen-overlay" style="display:none;">
     <h1>GAME OVER</h1>
     <div id="final-leaderboard" style="width: 80%; max-width: 600px; background: white; padding: 20px; border: 3px solid black;"></div>
     <button class="btn btn-danger" style="margin-top:20px;" onclick="socket.emit('reset')">Back to Lobby</button>
 </div>
 
-<div id="host-game-standard" class="main-content screen-overlay">
-  <h1 id="std-question-text">...</h1>
-  <div class="row" style="width: 100%;">
-    <div class="col-6" style="border-right: 2px dashed #ccc; text-align: center;">
-        <h2 style="color: #ff4757;">PULL</h2>
-        <div id="score-pull" class="vote-count">0</div>
-    </div>
-    <div class="col-6" style="text-align: center;">
-        <h2 style="color: #2ed573;">NOTHING</h2>
-        <div id="score-wait" class="vote-count">0</div>
-    </div>
+<div id="host-game-standard" class="main-content screen-overlay" style="display:none;">
   </div>
-  <div style="margin-top: 30px; text-align: center;">
-       <button id="btn-reveal" class="btn btn-warning" onclick="socket.emit('endRound')">Reveal Results</button>
-       <button id="btn-next" class="btn btn-primary" style="display:none;" onclick="socket.emit('nextRound')">Next</button>
-  </div>
-</div>
