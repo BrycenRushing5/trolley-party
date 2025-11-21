@@ -26,15 +26,14 @@ function App() {
 
   if (!gameState) return <div className="loading">Loading Party...</div>;
 
-  if (myRole === 'spectator') {
-    return <LoginScreen onJoin={handleJoin} onHost={handleHost} />;
-  }
-  if (myRole === 'host') {
-    return <HostScreen gameState={gameState} socket={socket} />;
-  }
-  if (myRole === 'player') {
-    return <PlayerScreen gameState={gameState} socket={socket} />;
-  }
+  return (
+    <div className="container">
+      {/* Screen Logic */}
+      {myRole === 'spectator' && <LoginScreen onJoin={handleJoin} onHost={handleHost} />}
+      {myRole === 'host' && <HostScreen gameState={gameState} socket={socket} />}
+      {myRole === 'player' && <PlayerScreen gameState={gameState} socket={socket} />}
+    </div>
+  );
 }
 
 export default App;

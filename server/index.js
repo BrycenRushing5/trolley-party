@@ -9,7 +9,12 @@ const StandardManager = require('./modes/StandardManager');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: "*", // Allow connections from anywhere (including localhost:5173)
+    methods: ["GET", "POST"]
+  }
+});
 
 // 1. SERVE REACT BUILD
 const clientBuildPath = path.join(__dirname, "../client/dist");
