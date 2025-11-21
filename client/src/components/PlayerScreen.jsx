@@ -22,7 +22,7 @@ export default function PlayerScreen({ gameState, socket }) {
         <div className="screen active">
            <p className="text-center bold">YOU are in the Hot Seat!</p>
            <p className="text-center">{currentQuestion?.text}</p>
-          <div className="btn-col">
+           <div className="btn-col hotseat-narrow">
               <button className="paper-btn btn-pull" onClick={() => socket.emit('submitHotSeatChoice', 'pull')}>PULL</button>
               <button className="paper-btn btn-wait" onClick={() => socket.emit('submitHotSeatChoice', 'wait')}>DO NOTHING</button>
            </div>
@@ -44,9 +44,9 @@ export default function PlayerScreen({ gameState, socket }) {
     return (
       <div className="screen active">
          <p className="text-center">What did they pick?</p>
-         <div className="btn-col">
+         <div className="btn-col hotseat-narrow">
             <button className="paper-btn btn-pull" onClick={() => socket.emit('submitGuess', 'pull')}>THEY PULLED</button>
-            <button className="paper-btn btn-wait" onClick={() => socket.emit('submitGuess', 'wait')}>THEY WAITED</button>
+            <button className="paper-btn btn-wait" onClick={() => socket.emit('submitGuess', 'wait')}>THEY DID NOTHING</button>
          </div>
       </div>
     );
@@ -64,7 +64,10 @@ export default function PlayerScreen({ gameState, socket }) {
                     <h3>Nice job!</h3>
                   </>
               ) : (
-                  <h2>No points this round.</h2>
+                  <>
+                    <h2>You didn't earn any points this round.</h2>
+                    <p>Total: {me ? me.score : 0} pts</p>
+                  </>
               )}
           </div>
       );

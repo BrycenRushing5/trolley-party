@@ -24,12 +24,9 @@ export default function GameView({ gameState, socket }) {
         <div className="intro-copy">
           <div className="pill">Hot Seat loading... {displayTimer}s</div>
           <h1>Hot Seat</h1>
-          <p>The host picks one random player. They secretly decide to <strong>pull</strong> or <strong>do nothing</strong> on the trolley track.</p>
+          <p>The host picks one random player. They secretly decide to <strong>Pull</strong> or <strong>Do Nothing</strong> on the trolley track.</p>
           <p>Everyone else talks it out and votes on what they think that player chose. Match their choice to earn points.</p>
           <p className="muted">Round starts automatically when the timer hits zero.</p>
-          <div className="intro-name">
-            🤫 Shhh... someone will be deciding soon <span className="dot-bounce-seq"><span>.</span><span>.</span><span>.</span></span> <span className="eyes-shift">👀</span>
-          </div>
         </div>
       </div>
     );
@@ -53,15 +50,30 @@ export default function GameView({ gameState, socket }) {
     const remaining = Math.max(0, (votes.remaining ?? (votes.total - votes.count)));
     return (
       <div className="screen-overlay">
-        <div className="big-timer">{displayTimer}</div>
-        <h2>Guess what <u>{target ? target.name : 'Target'}</u> chose!</h2>
-        <div className="voter-pill">{remaining} votes remaining</div>
-        <h1 className="question-text">{gameState.currentQuestion?.text}</h1>
-        <div className="row">
-           <div className="col-6 text-center"><h2 style={{color:'#ff4757'}}>PULL</h2></div>
-           <div className="col-6 text-center"><h2 style={{color:'#2ed573'}}>DO NOTHING</h2></div>
+        <div className="hotseat-board">
+          <div className="board-top">
+            <div>
+              <h2 className="board-title">Guess what <u>{target ? target.name : 'Target'}</u> chose!</h2>
+            </div>
+            <div className="board-stats">
+              <div className="pill stat-pill">⏳ {displayTimer}s</div>
+              <div className="pill stat-pill">Votes left: {remaining}</div>
+            </div>
+          </div>
+
+          <div className="board-body">
+            <div className="question-text">{gameState.currentQuestion?.text}</div>
+            <div className="scenario-img">Image coming soon</div>
+          </div>
+
+          <div className="board-footer">
+            <div className="row">
+              <div className="col-6 text-center"><h2 style={{color:'#ff4757'}}>PULL</h2></div>
+              <div className="col-6 text-center"><h2 style={{color:'#2ed573'}}>DO NOTHING</h2></div>
+            </div>
+            <button className="btn btn-small mt-20" onClick={() => socket.emit('forceEndHotSeat')}>Force Reveal</button>
+          </div>
         </div>
-        <button className="btn btn-small mt-20" onClick={() => socket.emit('forceEndHotSeat')}>Force Reveal</button>
       </div>
     );
   }
