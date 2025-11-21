@@ -6,11 +6,14 @@ class HotSeatManager {
         this.timerInterval = null;
         this.autoNextTimeout = null; // For the 10s wait
         this.usedHotSeatIds = [];
+        this.introInterval = null;
+        this.introShown = false;
     }
 
     startRound(question) {
         // CLEAR any existing timers from previous rounds
         clearInterval(this.timerInterval);
+        clearInterval(this.introInterval);
         clearTimeout(this.autoNextTimeout);
 
         this.gameState.currentQuestion = question;
@@ -36,9 +39,17 @@ class HotSeatManager {
         this.gameState.hotSeatPlayerId = randomPlayer.id;
         this.usedHotSeatIds.push(randomPlayer.id);
 
-        // Set Phase
-        this.gameState.phase = "hotseat_secret";
-        this.sync();
+        // Intro phase only on first round of Hot Seat
+        if (!this.introShown) {
+            this.introShown = true;
+            this.gameState.phase = "hotseat_intro";
+            this.gameState.timeLeft = 10; // 10 second explainer
+            this.sync();
+            this.startIntroTimer();
+            return;
+        }
+
+        this.beginSecretPhase();
     }
 
     handleChoice(socketId, choice) {
@@ -56,7 +67,7 @@ class HotSeatManager {
         this.sync();
 
         this.startTimer();
-        this.io.emit("voterUpdate", { count: 0, total: this.gameState.players.length - 1 });
+        this.io.emit("voterUpdate", { count: 0, total: this.gameState.players.length - 1, remaining: this.gameState.players.length - 1 });
     }
 
     handleGuess(socketId, guess) {
@@ -66,11 +77,28 @@ class HotSeatManager {
         const guessCount = Object.keys(this.gameState.guesses).length;
         const votersNeeded = this.gameState.players.length - 1;
 
-        this.io.emit("voterUpdate", { count: guessCount, total: votersNeeded });
+        this.io.emit("voterUpdate", { count: guessCount, total: votersNeeded, remaining: Math.max(0, votersNeeded - guessCount) });
 
         if (guessCount >= votersNeeded) {
             this.endRound();
         }
+    }
+
+    startIntroTimer() {
+        clearInterval(this.introInterval);
+        this.introInterval = setInterval(() => {
+            this.gameState.timeLeft--;
+            this.io.emit("timerUpdate", this.gameState.timeLeft);
+            if (this.gameState.timeLeft <= 0) {
+                clearInterval(this.introInterval);
+                this.beginSecretPhase();
+            }
+        }, 1000);
+    }
+
+    beginSecretPhase() {
+        this.gameState.phase = "hotseat_secret";
+        this.sync();
     }
 
     startTimer() {
@@ -86,6 +114,7 @@ class HotSeatManager {
 
     endRound() {
         clearInterval(this.timerInterval);
+        clearInterval(this.introInterval);
         this.gameState.phase = "round_summary";
         
         const correctPlayers = [];
@@ -129,6 +158,7 @@ class HotSeatManager {
 
     cleanup() {
         clearInterval(this.timerInterval);
+        clearInterval(this.introInterval);
         clearTimeout(this.autoNextTimeout);
     }
 

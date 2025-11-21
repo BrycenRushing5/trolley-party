@@ -7,33 +7,54 @@ import './App.css';
 
 function App() {
   const [gameState, setGameState] = useState(null);
-  const [myRole, setMyRole] = useState('spectator'); // 'spectator', 'host', 'player'
+  const [roomCode, setRoomCode] = useState(null);
+  const [myRole, setMyRole] = useState('spectator'); 
 
   useEffect(() => {
     socket.on('updateState', (state) => setGameState(state));
-    return () => socket.off('updateState');
+    
+    // Handle Creation Success
+    socket.on('gameCreated', ({ roomCode, state }) => {
+        setRoomCode(roomCode);
+        setGameState(state);
+        setMyRole('host');
+    });
+
+    socket.on('error', (msg) => alert(msg));
+
+    return () => {
+      socket.off('updateState');
+      socket.off('gameCreated');
+      socket.off('error');
+    };
   }, []);
 
-  const handleJoin = (name) => {
-    socket.emit('joinGame', name);
-    setMyRole('player');
+  const handleJoin = (name, code) => {
+    // If name is "HOST" (case insensitive), we treat them as a rejoining host
+    const isHostRejoin = name.toUpperCase() === 'HOST';
+    socket.emit('joinGame', { roomCode: code, name, isHost: isHostRejoin });
+    setMyRole(isHostRejoin ? 'host' : 'player');
+    setRoomCode(code);
   };
 
-  const handleHost = () => {
-    socket.emit('requestQrCode');
-    setMyRole('host');
+  const handleHostCreate = () => {
+    socket.emit('hostCreateGame');
   };
 
-  if (!gameState) return <div className="loading">Loading Party...</div>;
+  // 1. Login Screen
+  if (!gameState) {
+      return <LoginScreen onJoin={handleJoin} onHost={handleHostCreate} />;
+  }
 
-  return (
-    <div className="container">
-      {/* Screen Logic */}
-      {myRole === 'spectator' && <LoginScreen onJoin={handleJoin} onHost={handleHost} />}
-      {myRole === 'host' && <HostScreen gameState={gameState} socket={socket} />}
-      {myRole === 'player' && <PlayerScreen gameState={gameState} socket={socket} />}
-    </div>
-  );
+  // 2. Host Screen
+  if (myRole === 'host') {
+    return <HostScreen gameState={gameState} socket={socket} roomCode={roomCode} />;
+  }
+
+  // 3. Player Screen
+  if (myRole === 'player') {
+    return <PlayerScreen gameState={gameState} socket={socket} />;
+  }
 }
 
 export default App;
